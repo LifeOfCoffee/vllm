@@ -178,7 +178,7 @@ def _create_hisparse_host_events(
         )
         stream = torch.accelerator.current_stream()
         for event in events:
-            event.record(stream)
+            backend.record_event(event, stream)
         ipc_handles = tuple(backend.export_event(event) for event in events)
     ipc_handles = get_tp_group().broadcast_object(ipc_handles, src=0)
     if events is None:
@@ -415,7 +415,9 @@ class HiSparseConnectorWorker:
         previous_host_write_event = self.host_write_event
         self.host_write_event = self.host_write_events[self._next_host_write_event]
         self._next_host_write_event ^= 1
-        torch.accelerator.current_stream().wait_event(previous_host_write_event)
+        self.backend.wait_event(
+            torch.accelerator.current_stream(), previous_host_write_event
+        )
         if self.shared_host_region is not None and not num_tokens:
             # Without a forward, no TP collective keeps rank 0 from recording
             # a shared event again before every rank has issued its wait.
@@ -622,7 +624,7 @@ class HiSparseConnectorWorker:
                 descriptors.dst[:descriptor_count],
                 descriptors.sizes[:descriptor_count],
             )
-            self.host_write_event.record(stream)
+            self.backend.record_event(self.host_write_event, stream)
             completion_event.record(stream)
         self._pending_dma_descriptors.append((completion_event, descriptors))
         self._dma_submitted = True
@@ -919,10 +921,10 @@ class HiSparseConnectorWorker:
         self._finish_mirror_phase(self._forward_ready_event)
         if self.is_host_writer:
             if self._dma_submitted:
-                compute_stream.wait_event(self.host_write_event)
+                self.backend.wait_event(compute_stream, self.host_write_event)
                 self._dma_submitted = False
             else:
-                self.host_write_event.record(compute_stream)
+                self.backend.record_event(self.host_write_event, compute_stream)
         self._release_completed_dma_descriptors()
 
     def _finish_previous_step(self) -> None:

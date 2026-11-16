@@ -269,3 +269,10 @@ allocator, copy implementation, hot layout, and replacement policy should stay
 platform-specific. NVIDIA uses the current accelerator LRU and fused host/hot
 kernel. Other accelerators can implement `HiSparseBackend` and return its class
 path from their platform override without changing the shared control flow.
+
+Backends can restrict shared Host allocation for a particular configuration by
+overriding `can_share_host_pool(vllm_config)`. The common single-node TP topology
+checks still apply. The default preserves `supports_shared_host_pool` behavior.
+Host-write IPC events pass through `record_event(event, stream)` and
+`wait_event(stream, event)` so a backend can adapt runtime streams to its native
+event API. CUDA retains the existing record/wait behavior.

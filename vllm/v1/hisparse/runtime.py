@@ -283,7 +283,7 @@ def use_shared_hisparse_host_pool(vllm_config: VllmConfig) -> bool:
     """Whether replicated MLA host KV can share one local mmap."""
     parallel = vllm_config.parallel_config
     return (
-        get_hisparse_backend().supports_shared_host_pool
+        get_hisparse_backend().can_share_host_pool(vllm_config)
         and parallel.tensor_parallel_size > 1
         and parallel.pipeline_parallel_size == 1
         and parallel.prefill_context_parallel_size == 1
