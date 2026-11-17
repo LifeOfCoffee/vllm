@@ -26,6 +26,7 @@ from vllm.distributed.kv_transfer.kv_connector.v1.hisparse.worker import (
 from vllm.distributed.kv_transfer.kv_connector.v1.multi_connector import MultiConnector
 from vllm.v1.core.kv_cache_metrics import KVCacheMetricsCollector
 from vllm.v1.hisparse import runtime as runtime_module
+from vllm.v1.hisparse.backend import HiSparseBackend
 from vllm.v1.hisparse.coordinator import get_hisparse_coordinator
 from vllm.v1.hisparse.runtime import (
     HiSparseCacheHandle,
@@ -411,6 +412,7 @@ def test_zero_token_step_holds_tp_ranks_after_host_write_wait(
     monkeypatch.setattr(worker_module, "get_tp_group", lambda: tp_group)
 
     worker = object.__new__(HiSparseConnectorWorker)
+    worker.backend = HiSparseBackend()
     worker.shared_host_region = MagicMock() if shared else None
     worker.host_write_events = (MagicMock(), MagicMock())
     worker.host_write_event = worker.host_write_events[1]

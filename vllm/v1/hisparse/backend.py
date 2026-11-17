@@ -21,6 +21,10 @@ class HiSparseBackend:
     supports_shared_host_pool = False
     stats_dtype = torch.uint64
 
+    def can_share_host_pool(self, vllm_config: Any) -> bool:
+        """Allow a backend to restrict shared allocation to compatible connectors."""
+        return self.supports_shared_host_pool
+
     def check_available(self) -> None:
         raise NotImplementedError
 
@@ -57,6 +61,14 @@ class HiSparseBackend:
 
     def import_event(self, device: torch.device, handle: Any) -> Any:
         raise NotImplementedError
+
+    def record_event(self, event: Any, stream: torch.Stream) -> None:
+        """Record a Host-write event on a runtime stream."""
+        event.record(stream)
+
+    def wait_event(self, stream: torch.Stream, event: Any) -> None:
+        """Wait for a Host-write event, including backend-native IPC events."""
+        stream.wait_event(event)
 
     def gather_resident_rows(
         self, source: torch.Tensor, destination: torch.Tensor, row_ids: torch.Tensor
